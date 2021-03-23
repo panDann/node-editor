@@ -1,14 +1,15 @@
 import styles from './index.less';
 import cht from './test.cht';
 import EBase from '@src/base';
-import {useBase} from '@src/base/index-hook';
+import { useBase } from '@src/base/index-hook';
 import { EOption } from '@src/base/option';
 import { BarChart } from 'echarts/charts';
+import { useState } from 'react';
 
 EBase.use(BarChart)
 const HookChart = useBase(BarChart)
 const option = new EOption({
-  title:{text:'333'},
+  title: { text: '333' },
   legend: {},
   tooltip: {},
   dataset: {
@@ -30,21 +31,25 @@ const option = new EOption({
     { type: 'bar' }
   ]
 })
-let count = 0
+let external = 0
 export default function IndexPage() {
+  const [count, setCount] = useState(0)
   const onClick = () => {
-    // option.setTheme('dark')
-    option.assign('title',{text:++count+''})
+    // option.assign('title', { text: ++external + '' })
+    // setCount(count + 1)
+    option.setExtra('theme', external++%2?'dark':'light')
+    option.resize()
+    option.assign('title', { text: external + '' })
+    
   }
-    option.setExtra('theme','dark')
-    option.assign('title',{text:++count+''})
-    return (
+  
+  return (
     <div>
       <h1 className={styles.title} onClick={onClick}>主题</h1>
       <h1 className={styles.title} onClick={onClick}>resize</h1>
-      <div style={{ height: 300, width: 300 }}>
-        <EBase option={option} />
-        {/* <HookChart option={option} /> */}
+      <div style={{ height: 300, width: 300 + count, background: 'grey' }}>
+        {/* <EBase option={option} /> */}
+        <HookChart option={option} />
       </div>
     </div>
   );

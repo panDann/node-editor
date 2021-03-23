@@ -40,7 +40,6 @@ export class Chart extends Component<IProp, IState> {
         this.state = {
             count: 0
         }
-        this.props.option.notify(this.dispatch = this.dispatch.bind(this))
     }
     ref = createRef<HTMLDivElement>()
     chart: any = null
@@ -48,26 +47,21 @@ export class Chart extends Component<IProp, IState> {
     dispatch() {
         this.setState({ count: this.state.count + 1 })
     }
-
     render() {
         return createElement('div', { className: this.props.className, ref: this.ref, style: { height: '100%', width: '100%', ...this.props.style }, })
     }
-    componentDidUpdate(prop: IProp,) {
-        const { option: { changeList } } = prop
-        if (changeList.includes('renderer') || changeList.includes('theme')) {
-            prop.option.changeList = []
+    componentDidUpdate(prop: IProp, preS: IState) {
+        if (preS.count !== this.state.count) {
             this.reInit()
-            return
         }
-        changeList.includes('resize') && this.chart.resize()
-        changeList.includes('option') && this.chart.setOption(this.props.option.now())
-        prop.option.changeList = []
     }
     reInit() {
+
         const { option } = this.props
         this.chart && echarts.dispose(this.chart)
         this.chart = echarts.init(this.ref.current as HTMLDivElement, option.theme, { renderer: option.renderer })
         this.chart.setOption(option.now())
+        option.notify(this.dispatch = this.dispatch.bind(this), this.chart)
     }
     componentDidMount() {
         this.reInit()

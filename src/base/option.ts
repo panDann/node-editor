@@ -15,8 +15,8 @@ type EchartSinglePro = {
     series: EO.Series
 }
 type EchartPro = {
-    dataZoom: EO.DataZoom[]
-    series: EO.Series[]
+    dataZoom: EO.DataZoom
+    series: EO.Series
 }
 
 type ExtraValue = {
@@ -27,6 +27,7 @@ type ExtraValue = {
 
 const _assign = Object.assign
 let timer: ReturnType<typeof setTimeout>
+let timerOption: ReturnType<typeof setTimeout>
 export class EOption {
 
     constructor(customOptions: EO) {
@@ -35,8 +36,7 @@ export class EOption {
     private option: EO = {}
     theme: string | object = 'light'
     renderer: 'svg' | 'canvas' = 'svg'
-    size = 0
-    changeList: (keyof ExtraValue | 'option')[] = []
+    private chart: any = null
     private _trigger: Dispatch<Action> & any = null
     private trigger() {
         // 异步赋值
@@ -45,30 +45,34 @@ export class EOption {
             this._trigger && this._trigger()
         }, 0);
     }
+
+    private triggerOption() {
+        // 异步赋值
+        if (this.chart) {
+            if (timerOption) clearTimeout(timerOption)
+            timerOption = setTimeout(() => {
+                this.chart.setOption(this.option)
+            }, 0);
+        }
+    }
     now = () => this.option
-    notify = (dispatch: Dispatch<Action>) => this._trigger = dispatch
+    notify = (dispatch: Dispatch<Action>, chart?: any) => (this._trigger = dispatch, this.chart = chart)
 
     setExtra<T extends keyof ExtraValue>(key: T, value: ExtraValue[T]) {
         _assign(this, { [key]: value })
         this.trigger()
-        this.changeList.push(key)
     }
-
+    resize = () => {
+        this.chart && this.chart.resize()
+    }
     assign<T extends keyof EchartSinglePro>(key: T, prop: EchartSinglePro[T]) {
         this.option[key] = _assign(this.option[key], prop);
-        this.trigger()
-        this.changeList.push('option')
+        this.triggerOption()
     }
-
-    assigns<T extends keyof EchartPro>(key: T, props: EchartPro[T]) {
-        // this.option[key].forEach((el, index) => _assign(el, props[index]))
-        this.trigger()
-        this.changeList.push('option')
+    assigns<T extends keyof EchartPro>(key: T, props: EchartPro[T][]) {
+        (this.option[key] as EchartPro[T][]).forEach((el, index) => _assign(el, props[index]))
+        this.triggerOption()
     }
-
-    // assignSeries(series: EO.Series | EO.Series[]) {
-    //     this.option.series[Array.isArray(series) ? 'concat' : 'push'](series)
-    // }
     add = <T extends keyof EchartSinglePro>(key: T, val: EO[T]) => this.option[key] = val
     delete(key: keyof EchartSinglePro) {
         delete this.option[key];
