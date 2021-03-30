@@ -58,8 +58,9 @@ export class Chart extends Component<IProp, IState> {
     reInit() {
 
         const { option } = this.props
+        const extra = option.extraMsg()
         this.chart && echarts.dispose(this.chart)
-        this.chart = echarts.init(this.ref.current as HTMLDivElement, option.theme, { renderer: option.renderer })
+        this.chart = echarts.init(this.ref.current as HTMLDivElement, extra.theme, { renderer: extra.renderer })
         this.chart.setOption(option.now())
         option.notify(this.dispatch = this.dispatch.bind(this), this.chart)
     }

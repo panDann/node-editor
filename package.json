@@ -8,6 +8,7 @@
     "test": "umi-test",
     "test:coverage": "umi-test --coverage"
   },
+  "sideEffects":false,
   "dependencies": {},
   "devDependencies": {
     "@types/echarts": "^4.9.6",

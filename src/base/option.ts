@@ -20,53 +20,49 @@ type EchartPro = {
 }
 
 type ExtraValue = {
-    resize: boolean,
     theme: string | object
     renderer: 'svg' | 'canvas'
 }
 
 const _assign = Object.assign
-let timer: ReturnType<typeof setTimeout>
-let timerOption: ReturnType<typeof setTimeout>
+const createTimer = (operate: Function) => {
+    let timer: ReturnType<typeof setTimeout>
+    return () => {
+        if (timer) clearTimeout(timer)
+        timer = setTimeout(() => {
+            operate()
+        }, 0);
+    }
+}
 export class EOption {
 
     constructor(customOptions: EO) {
-        this.option = { ...customOptions };
+        _assign(this.option, customOptions)
     }
     private option: EO = {}
-    theme: string | object = 'light'
-    renderer: 'svg' | 'canvas' = 'svg'
+    private extra: ExtraValue = {
+        theme: 'light',
+        renderer: 'svg'
+    }
     private chart: any = null
     private _trigger: Dispatch<Action> & any = null
-    private trigger() {
-        // 异步赋值
-        if (timer) clearTimeout(timer)
-        timer = setTimeout(() => {
-            this._trigger && this._trigger()
-        }, 0);
-    }
+    private trigger = createTimer(() => this._trigger && this._trigger())
 
-    private triggerOption() {
-        // 异步赋值
-        if (this.chart) {
-            if (timerOption) clearTimeout(timerOption)
-            timerOption = setTimeout(() => {
-                this.chart.setOption(this.option)
-            }, 0);
-        }
-    }
+    private triggerOption = createTimer(() => this.chart && this.chart.setOption(this.option))
+
     now = () => this.option
+    extraMsg = () => this.extra
     notify = (dispatch: Dispatch<Action>, chart?: any) => (this._trigger = dispatch, this.chart = chart)
 
     setExtra<T extends keyof ExtraValue>(key: T, value: ExtraValue[T]) {
-        _assign(this, { [key]: value })
-        this.trigger()
-    }
+        _assign(this.extra, { [key]: value })
+        this.trigger()  
+    } 
     resize = () => {
         this.chart && this.chart.resize()
     }
     assign<T extends keyof EchartSinglePro>(key: T, prop: EchartSinglePro[T]) {
-        this.option[key] = _assign(this.option[key], prop);
+        this.option[key] = _assign(this.option[key], prop); 
         this.triggerOption()
     }
     assigns<T extends keyof EchartPro>(key: T, props: EchartPro[T][]) {

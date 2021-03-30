@@ -12,7 +12,7 @@ import {
 } from 'echarts/renderers';
 
 import { EOption } from './option'
-import {  initS, reducer } from './store'
+import { initS, reducer } from './store'
 interface IProp {
     style?: CSSProperties
     className?: string
@@ -28,23 +28,24 @@ const baseCom: UseDep = [
 ]
 
 export class EBase {
-    constructor(extra: UseDep) {
+    constructor(extra: UseDep) { 
         echarts.use((baseCom as any).concat(extra))
     }
     Chart({ className, option, watch = true, ...rest }: IProp) {
-        option||console.error("option don't allow to set empty,it must be an instance of EOption");
+        option || console.error("option don't allow to set empty,it must be an instance of EOption");
         const echartRef = useRef<HTMLDivElement | null>(null)
         const chart = useRef<any>(null)
         const [count, setCount] = useState(0)
         // 处理首次与特殊渲染（主题，引擎）
         useLayoutEffect(() => {
-            chart.current = echarts.init(echartRef.current as any, option.theme, { renderer: option.renderer })
+            const extra = option.extraMsg()
+            chart.current = echarts.init(echartRef.current as any, extra.theme, { renderer: extra.renderer })
             chart.current.setOption(option.now())
-            option.notify(()=>setCount(count+1),chart.current)
+            option.notify(() => setCount(count + 1), chart.current)
             return () => echarts.dispose(chart.current)
         }, [count])
         return createElement('div', { className, style: { height: '100%', width: '100%', ...rest.style }, ref: echartRef })
     }
 }
 
-export const useBase = (extra: UseDep)=>new EBase(extra).Chart
+export const useBase = (extra: UseDep) => new EBase(extra).Chart

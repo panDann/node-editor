@@ -1,7 +1,7 @@
 const pathResolver = require('path').resolve
 const HTML = require('html-webpack-plugin')
 
-
+const exclude= [/node_modules/, /images/, /content/]
 
 module.exports = {
     entry: './src/index',
@@ -21,7 +21,8 @@ module.exports = {
         rules: [
             {
                 test: /\.(tsx|ts)$/,
-                loader: 'awesome-typescript-loader'
+                loader: 'awesome-typescript-loader',
+                exclude
             },
             {
                 test: /\.(cht)$/,
@@ -38,7 +39,8 @@ module.exports = {
                         }
                     },
                     'less-loader'
-                ]
+                ],
+                exclude
             },
         ]
     },
