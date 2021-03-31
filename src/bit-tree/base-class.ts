@@ -3,8 +3,6 @@ import {
     Rect,
     MoveType
 } from './types'
-
-
 export class BitNode<T extends Rect>  {
     constructor(data?: T) {
         this.data = data
@@ -13,7 +11,7 @@ export class BitNode<T extends Rect>  {
     height = 0
     left: BitNode<T> | null = null
     right: BitNode<T> | null = null
-    // parent: BitNode<T> | null = null
+    parent: BitNode<T> | null = null
     sibling: BitNode<T> | null = null
 
     status: 'single' | 'link' = 'single'
@@ -22,10 +20,10 @@ export class BitNode<T extends Rect>  {
     children?: BitNode<T>[] = []
     insertAt(direction: 'left' | 'right', dt?: T) {
         const n = new BitNode(dt)
-        // n.parent = this
+        n.parent = this
         if (this[direction]) {
             //@ts-ignore
-            // this[direction].parent = n
+            this[direction].parent = n
             n[direction] = this[direction]
             //@ts-ignore
             n.height = this[direction].height + 1
@@ -54,7 +52,9 @@ const _ass = Object.assign
 const minGap = 10,
     color = {
         primary: '#99CC66',
-        warning: '#FF6666'
+        warning: '#FF6666',
+        dragPrimary: '#99cc6666',
+        dragWarning: '#d60f0f5c'
     },
     radius = 4,
     fontSize = 20,
@@ -68,14 +68,7 @@ export class BitTree<T extends Rect> {
     root: BitNode<T> | null = null
     moveType = 2
     // canvasEL: HTMLCanvasElement | null = null
-    private _coverPoint = { x: 0, y: 0, h: 0, w: 0 }
-    get coverPoint(): Rect {
-        return this._coverPoint
-    }
-    set coverPoint(val: Rect) {
-        this._coverPoint = val
-        this.drawCover()
-    }
+    coverPoint = { x: 0, y: 0, h: 0, w: 0 }
     moveNode: BitNode<T> | null = null
     moveOffsetTop = 0
     moveOffsetLeft = 0
@@ -116,14 +109,17 @@ export class BitTree<T extends Rect> {
         n.sibling = origin.sibling
         origin.sibling = n
     }
-
+    isRoot() {
+        return
+    }
     init(canvasEL: HTMLCanvasElement) {
         const { width, height, x, y } = canvasEL.getBoundingClientRect()
         this.ctx = canvasEL.getContext('2d')
         _ass(this.root?.data, { w: width, h: height })
     }
-    isPointPath(x: number, y: number) {
-        return this.ctx?.isPointInPath(x, y)
+    isPointInCanvas(x: number, y: number) {
+        // @ts-ignore
+        return pointInRect(this.root?.data, x, y)
     }
     getClickPosi(x: number, y: number) {
 
@@ -132,7 +128,7 @@ export class BitTree<T extends Rect> {
         if (this.moveType == MoveType.node) {
             this.traverse(t => {
                 // @ts-ignore
-                if (this.pointInRect(t.data, x, y)) clickNode = t
+                if (pointInRect(t.data, x, y)) clickNode = t
                 return false
             })
             // @ts-ignore
@@ -149,53 +145,42 @@ export class BitTree<T extends Rect> {
     // 获取移动坐标
     getMovePosi(x: number, y: number) {
 
-        if (this.moveType == MoveType.cover)
+        if (this.moveType == MoveType.cover) {
             this.coverPoint = calcRec(clickPos, { x, y })
-        else
+            this.drawCover()
+        } else
             if (this.moveNode) {
-                const moveRect = _ass({}, { ...this.moveNode.data, x: x - this.moveOffsetLeft, y: y - this.moveOffsetTop })
-                // @ts-ignore
-                if (this.checkMoveOverstep(moveRect)) return
-                // @ts-ignore
-                const childOffsetL = moveRect.x - this.moveNode.data.x
-                // @ts-ignore
-                const childOffsetT = moveRect.y - this.moveNode.data.y
-                _ass(this.moveNode.data, moveRect)
-                this.traverse(t => {
-                    // @ts-ignore
-                    if (t.i == this.moveNode.i) return false
-                    // @ts-ignore
-                    _ass(t.data, { x: t.data.x + childOffsetL, y: t.data.y + childOffsetT })
-                    return false
-                }, this.moveNode)
-                this.clearFull()
-                this.draw()
-            }
 
+                // @ts-ignore
+                this.coverPoint = _ass({}, { ...this.moveNode.data, x: x - this.moveOffsetLeft, y: y - this.moveOffsetTop })
+                this.drawDragCover()
+            }
     }
     checkMoveOverstep({ x, y, w, h }: Rect) {
-
         // @ts-ignore
         return !rectInRect({ x, y, w, h }, this.root?.data)
     }
     draw() {
+        this.clearFull()
         // @ts-ignore
-        this.traverse(({ data: { x, y, w, h } }: BitNode<Rect>) => this.drawRect(this.ctx as CanvasRenderingContext2D, { x, y, w, h }))
+        this.traverse(({ data: { x, y, w, h } }: BitNode<Rect>) => drawPath(this.ctx as CanvasRenderingContext2D, { x, y, w, h }))
     }
     clearFull() {
         // @ts-ignore
         this.ctx?.clearRect(0, 0, this.root?.data.w, this.root?.data.h)
     }
     drawCover() {
-        this.clearFull()
         this.draw()
-        const coverColor = this.isValidCoverRect(this.coverPoint) ? color.primary : color.warning
-        this.drawRect(this.ctx as CanvasRenderingContext2D, this.coverPoint, coverColor)
+        drawPath(this.ctx as CanvasRenderingContext2D, this.coverPoint, this.isValidCoverRect(this.coverPoint) ? color.primary : color.warning)
+    }
+    drawDragCover() {
+        this.draw()
+        drawRect(this.ctx as CanvasRenderingContext2D, this.coverPoint, this.isValidDrag(this.coverPoint) ? color.dragPrimary : color.dragWarning)
     }
     freezeCover(x: number, y: number) {
         // this.checkMoveOverstep(moveRect)
-        if (this.moveType == MoveType.cover)
-            if (this.isPointPath(x, y) && this.isValidCoverRect(this.coverPoint)) {
+        if (this.isPointInCanvas(x, y)) {
+            if (this.moveType == MoveType.cover && this.isValidCoverRect(this.coverPoint)) {
                 let coverPar: BitNode<T> | null = null,
                     coverChildren: BitNode<T>[] = []
                 // @ts-ignore
@@ -219,10 +204,41 @@ export class BitTree<T extends Rect> {
                 })
                 // @ts-ignore
                 nodeShouldPlace(coverPar, coverNode)
-            } else {
-                this.clearFull()
-                this.draw()
+                return
             }
+
+            if (this.moveType == MoveType.node && this.moveNode !== null && this.isValidDrag(this.coverPoint)) {
+
+                //    更新子节点位置
+                this.traverse(t => {
+                    // @ts-ignore
+                    if (t.i == this.moveNode?.i) return false
+                    // @ts-ignore
+                    const oLeft = t.data.x - this.moveNode?.data.x
+                    // @ts-ignore
+                    const oTop = t.data.y - this.moveNode?.data.y
+                    _ass(t.data, { x: this.coverPoint.x + oLeft, y: this.coverPoint.y + oTop })
+                    return false
+                }, this.moveNode)
+
+                // 更新拖动之后的节点位置
+                let coverPar: BitNode<T> | null = null
+                // @ts-ignore 查找直系父元素
+                this.traverse((t) => {
+                    // @ts-ignore
+                    if (rectInRect(this.coverPoint, t.data))
+                        coverPar = t
+                    return false
+                })
+                // @ts-ignore
+                _ass(this.moveNode.data, { ...this.coverPoint })
+            }
+            // 移除当前移动节点
+            this.moveNode = null
+            this.draw()
+        }
+
+
     }
 
     // 删除某个节点匹配到的子树（只删除纵向）
@@ -252,55 +268,45 @@ export class BitTree<T extends Rect> {
         })
         return sub
     }
+    isValidDrag(target: Rect) {
+        if (this.checkMoveOverstep(target)) return false
+        let bitNodeS = [], temNode = null
+        bitNodeS.push(this.root)
+        while (bitNodeS.length) {
+            temNode = bitNodeS.pop()
+            // // @ts-ignore
+            if (temNode?.sibling) bitNodeS.push(temNode.sibling)
+            // @ts-ignore
+            if (temNode.i == this.moveNode.i)//剔除拖动时与自身相交
+                continue
+            else {
+                // @ts-ignore
+                if (rectCross(temNode?.data, this.coverPoint)) return false
+            }
 
+            if (temNode?.right) bitNodeS.push(temNode.right)
+            if (temNode?.left) bitNodeS.push(temNode.left)
+        }
+        return true
+    }
     // 判断coverRect是否与已经存在的节点相交
     isValidCoverRect(target: Rect) {
-        let rectangle = [false, false, false, false],
-            reverseRect = [false, false, false, false],
-            res = false
+        let res = false
         // @ts-ignore
         this.traverse(({ data: { x, y, w, h } }: BitNode<Rect>) => {
             if (x === 0 && y === 0) return false
-            const { x: tX, y: tY, w: tW, h: tH } = target
-            rectangle = [
-                this.pointInRect(target, x, y),
-                this.pointInRect(target, x + w, y),
-                this.pointInRect(target, x + w, y + h),
-                this.pointInRect(target, x, y + h),
-            ]
-            reverseRect = [
-                this.pointInRect({ x, y, w, h }, tX, tY),
-                this.pointInRect({ x, y, w, h }, tX + tW, tY),
-                this.pointInRect({ x, y, w, h }, tX + tW, tY + tH),
-                this.pointInRect({ x, y, w, h }, tX, tY + tH),
-            ]
-            res = (rectangle.some(el => el === false) && rectangle.some(el => el === true))
-                || (reverseRect.some(el => el === false) && reverseRect.some(el => el === true))
+            res = rectCross(target, { x, y, w, h })
             // res = tX < x + w && tX + tW > x && tY > y + h && tY + tH < y
-            return res
+            return rectCross(target, { x, y, w, h })
         })
         return !res
     }
-    pointInRect({ x, y, w, h }: Rect, pX: number, pY: number,) {
-        return pX > x && pX < x + w && pY > y && pY < y + h
-    }
 
-    drawRect = (ctx: CanvasRenderingContext2D, { x, y, w, h }: Rect, reColor?: string) => {
-        ctx.beginPath()
-        ctx.moveTo(x, y)
-        // ctx.arc(x+radius/2,y+radius/2,radius/2,0,Math.PI)
-        ctx.lineTo(x + w, y)
-        ctx.lineTo(x + w, y + h)
-        ctx.lineTo(x, y + h)
-        ctx.closePath()
-        ctx.strokeStyle = reColor || color.primary
-        ctx.lineWidth = lineWidth
-        ctx.lineJoin = 'round'
-        ctx.stroke()
-        return false
-    }
+
 }
-
+const pointInRect = ({ x, y, w, h }: Rect, pX: number, pY: number,) => {
+    return pX > x && pX < x + w && pY > y && pY < y + h
+}
 const calcRec = (start: Posi, end: Posi): Rect => {
     const h = Math.abs(start.y - end.y)
     const w = Math.abs(start.x - end.x)
@@ -314,6 +320,26 @@ const rectInRect = ({ x, y, w, h }: Rect, { x: tX, y: tY, w: tW, h: tH }: Rect,)
     return x > tX && x + w < tX + tW && y > tY && y + h < tY + tH
 }
 
+const rectCross = ({ x, y, w, h }: Rect, target: Rect) => {
+    let rectangle = [false, false, false, false],
+        reverseRect = [false, false, false, false]
+    const { x: tX, y: tY, w: tW, h: tH } = target
+    rectangle = [
+        pointInRect(target, x, y),
+        pointInRect(target, x + w, y),
+        pointInRect(target, x + w, y + h),
+        pointInRect(target, x, y + h),
+    ]
+    reverseRect = [
+        pointInRect({ x, y, w, h }, tX, tY),
+        pointInRect({ x, y, w, h }, tX + tW, tY),
+        pointInRect({ x, y, w, h }, tX + tW, tY + tH),
+        pointInRect({ x, y, w, h }, tX, tY + tH),
+    ]
+    return (rectangle.some(el => el === false) && rectangle.some(el => el === true))
+        || (reverseRect.some(el => el === false) && reverseRect.some(el => el === true))
+}
+
 const nodeShouldPlace = (parent: BitNode<any>, target: BitNode<any>) => {
     if (!parent.left) {
         parent.left = target
@@ -325,4 +351,24 @@ const nodeShouldPlace = (parent: BitNode<any>, target: BitNode<any>) => {
     }
     target.sibling = parent.right.sibling
     parent.right.sibling = target
+}
+
+const drawPath = (ctx: CanvasRenderingContext2D, { x, y, w, h }: Rect, reColor?: string) => {
+    ctx.beginPath()
+    ctx.moveTo(x, y)
+    // ctx.arc(x+radius/2,y+radius/2,radius/2,0,Math.PI)
+    ctx.lineTo(x + w, y)
+    ctx.lineTo(x + w, y + h)
+    ctx.lineTo(x, y + h)
+    ctx.closePath()
+    ctx.strokeStyle = reColor || color.primary
+    ctx.lineWidth = lineWidth
+    ctx.lineJoin = 'round'
+    ctx.stroke()
+    return false
+}
+const drawRect = (ctx: CanvasRenderingContext2D, { x, y, w, h }: Rect, reColor?: string) => {
+    ctx.fillStyle = reColor || color.primary
+    ctx.fillRect(x, y, w, h)
+
 }

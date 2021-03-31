@@ -3,6 +3,7 @@ import cht from './test.cht';
 import EBase from '@src/base';
 import { useBase } from '@src/base/index-hook';
 import BitTreeTest from '@src/bit-tree/test';
+import BitTreeCom from '@src/bit-tree';
 import { EOption } from '@src/base/option';
 import { BarChart } from 'echarts/charts';
 import { useState } from 'react';
