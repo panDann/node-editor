@@ -10,7 +10,7 @@ export class BitNode<T extends Rect>  {
     i = Date.now() + ''
     height = 0
     left: BitNode<T> | null = null
-    right: BitNode<T> | null = null
+    // right: BitNode<T> | null = null
     parent: BitNode<T> | null = null
     sibling: BitNode<T> | null = null
 
@@ -18,7 +18,7 @@ export class BitNode<T extends Rect>  {
     data: T | undefined = undefined
     innerText = 'node'
     children?: BitNode<T>[] = []
-    insertAt(direction: 'left' | 'right', dt?: T) {
+    insertAt(direction: 'left' , dt?: T) {
         const n = new BitNode(dt)
         n.parent = this
         if (this[direction]) {
@@ -93,7 +93,6 @@ export class BitTree<T extends Rect> {
             // @ts-ignore
             if (visit(temNode)) return temNode
             if (temNode?.sibling) bitNodeS.push(temNode.sibling)
-            if (temNode?.right) bitNodeS.push(temNode.right)
             if (temNode?.left) bitNodeS.push(temNode.left)
         }
         return -1
@@ -101,9 +100,9 @@ export class BitTree<T extends Rect> {
     insertLeftAt(origin: BitNode<T>, target: T) {
         origin.insertAt('left', target)
     }
-    insertRightAt(origin: BitNode<T>, target: T) {
-        origin.insertAt('right', target)
-    }
+    // insertRightAt(origin: BitNode<T>, target: T) {
+    //     origin.insertAt('right', target)
+    // }
     insertSiblingAt(origin: BitNode<T>, target: T) {
         const n = new BitNode(target)
         n.sibling = origin.sibling
@@ -250,15 +249,6 @@ export class BitTree<T extends Rect> {
                 t.left = null
                 return true
             }
-            if (t.right !== null && t.right.i == i) {
-                sub = t.right
-                if (t.right.sibling) {
-                    t.right = t.right.sibling
-                } else {
-                    t.right = null
-                }
-                return true
-            }
             if (t.sibling !== null && t.sibling.i == i) {
                 sub = t.sibling
                 t.sibling = t.sibling.sibling
@@ -284,7 +274,6 @@ export class BitTree<T extends Rect> {
                 if (rectCross(temNode?.data, this.coverPoint)) return false
             }
 
-            if (temNode?.right) bitNodeS.push(temNode.right)
             if (temNode?.left) bitNodeS.push(temNode.left)
         }
         return true
@@ -345,12 +334,8 @@ const nodeShouldPlace = (parent: BitNode<any>, target: BitNode<any>) => {
         parent.left = target
         return
     }
-    if (!parent.right) {
-        parent.right = target
-        return
-    }
-    target.sibling = parent.right.sibling
-    parent.right.sibling = target
+    target.sibling = parent.sibling
+    parent.sibling = target
 }
 
 const drawPath = (ctx: CanvasRenderingContext2D, { x, y, w, h }: Rect, reColor?: string) => {
