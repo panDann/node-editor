@@ -14,5 +14,5 @@ export type Posi = {
   }
   export  const MoveType= {
     cover: 2,
-    node: 1
+    node: 0
   }

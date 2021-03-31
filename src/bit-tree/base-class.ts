@@ -58,7 +58,7 @@ const minGap = 10,
     },
     radius = 4,
     fontSize = 20,
-    lineWidth = 1
+    lineWidth = 2
 const clickPos = { x: 0, y: 0 }
 export class BitTree<T extends Rect> {
 
@@ -74,8 +74,11 @@ export class BitTree<T extends Rect> {
     }
     set coverPoint(val: Rect) {
         this._coverPoint = val
-        this.moveType === MoveType.cover && this.drawCover()
+        this.drawCover()
     }
+    moveNode: BitNode<T> | null = null
+    moveOffsetTop = 0
+    moveOffsetLeft = 0
     ctx: CanvasRenderingContext2D | null = null
     isEmpty() {
         return this.root === null
@@ -89,9 +92,9 @@ export class BitTree<T extends Rect> {
             return this.root.height
         return -1
     }
-    traverse(visit: (target: BitNode<T>) => boolean): BitNode<T> | number {
+    traverse(visit: (target: BitNode<T>) => boolean, tree = this.root): BitNode<T> | number {
         let bitNodeS = [], temNode = null
-        bitNodeS.push(this.root)
+        bitNodeS.push(tree)
         while (bitNodeS.length) {
             temNode = bitNodeS.pop()
             // @ts-ignore
@@ -115,7 +118,7 @@ export class BitTree<T extends Rect> {
     }
 
     init(canvasEL: HTMLCanvasElement) {
-        const { width, height } = canvasEL.getBoundingClientRect()
+        const { width, height, x, y } = canvasEL.getBoundingClientRect()
         this.ctx = canvasEL.getContext('2d')
         _ass(this.root?.data, { w: width, h: height })
     }
@@ -123,14 +126,57 @@ export class BitTree<T extends Rect> {
         return this.ctx?.isPointInPath(x, y)
     }
     getClickPosi(x: number, y: number) {
-        _ass(clickPos,{ x, y })
-    }
-    getMovePosi(x: number, y: number) {
-        if (this.moveType == MoveType.cover) {
-            this.coverPoint = calcRec(clickPos, { x, y })
-        }else{
 
+        _ass(clickPos, { x, y })
+        let clickNode = null
+        if (this.moveType == MoveType.node) {
+            this.traverse(t => {
+                // @ts-ignore
+                if (this.pointInRect(t.data, x, y)) clickNode = t
+                return false
+            })
+            // @ts-ignore
+            if (clickNode && clickNode.data.x != 0 && clickNode.data.y != 0) {
+                this.moveNode = clickNode
+                // @ts-ignore
+                this.moveOffsetLeft = x - clickNode.data.x
+                // @ts-ignore
+                this.moveOffsetTop = y - clickNode.data.y
+            }
         }
+
+    }
+    // 获取移动坐标
+    getMovePosi(x: number, y: number) {
+
+        if (this.moveType == MoveType.cover)
+            this.coverPoint = calcRec(clickPos, { x, y })
+        else
+            if (this.moveNode) {
+                const moveRect = _ass({}, { ...this.moveNode.data, x: x - this.moveOffsetLeft, y: y - this.moveOffsetTop })
+                // @ts-ignore
+                if (this.checkMoveOverstep(moveRect)) return
+                // @ts-ignore
+                const childOffsetL = moveRect.x - this.moveNode.data.x
+                // @ts-ignore
+                const childOffsetT = moveRect.y - this.moveNode.data.y
+                _ass(this.moveNode.data, moveRect)
+                this.traverse(t => {
+                    // @ts-ignore
+                    if (t.i == this.moveNode.i) return false
+                    // @ts-ignore
+                    _ass(t.data, { x: t.data.x + childOffsetL, y: t.data.y + childOffsetT })
+                    return false
+                }, this.moveNode)
+                this.clearFull()
+                this.draw()
+            }
+
+    }
+    checkMoveOverstep({ x, y, w, h }: Rect) {
+
+        // @ts-ignore
+        return !rectInRect({ x, y, w, h }, this.root?.data)
     }
     draw() {
         // @ts-ignore
@@ -147,35 +193,36 @@ export class BitTree<T extends Rect> {
         this.drawRect(this.ctx as CanvasRenderingContext2D, this.coverPoint, coverColor)
     }
     freezeCover(x: number, y: number) {
-
-        if (this.moveType == MoveType.cover&&this.isPointPath(x, y) && this.isValidCoverRect(this.coverPoint)) {
-            let coverPar: BitNode<T> | null = null,
-                coverChildren: BitNode<T>[] = []
-            // @ts-ignore
-            this.traverse((t) => {
+        // this.checkMoveOverstep(moveRect)
+        if (this.moveType == MoveType.cover)
+            if (this.isPointPath(x, y) && this.isValidCoverRect(this.coverPoint)) {
+                let coverPar: BitNode<T> | null = null,
+                    coverChildren: BitNode<T>[] = []
                 // @ts-ignore
-                if (rectInRect(t.data, this.coverPoint))
-                    coverChildren.push(t)
-                // @ts-ignore
-                if (rectInRect(this.coverPoint, t.data))
-                    coverPar = t
-                return false
-            })
-            const coverNode = new BitNode({ ...this.coverPoint })
-            // 处理包含了子节点情况
-            coverChildren.forEach((el, index) => {
-                let tem = this.deleteSubTree(el.i)
-                if (tem !== -1) {
+                this.traverse((t) => {
                     // @ts-ignore
-                    nodeShouldPlace(coverNode, tem)
-                }
-            })
-            // @ts-ignore
-            nodeShouldPlace(coverPar, coverNode)
-        } else {
-            this.clearFull()
-            this.draw()
-        }
+                    if (rectInRect(t.data, this.coverPoint))
+                        coverChildren.push(t)
+                    // @ts-ignore
+                    if (rectInRect(this.coverPoint, t.data))
+                        coverPar = t
+                    return false
+                })
+                const coverNode = new BitNode({ ...this.coverPoint })
+                // 处理包含了子节点情况
+                coverChildren.forEach((el, index) => {
+                    let tem = this.deleteSubTree(el.i)
+                    if (tem !== -1) {
+                        // @ts-ignore
+                        nodeShouldPlace(coverNode, tem)
+                    }
+                })
+                // @ts-ignore
+                nodeShouldPlace(coverPar, coverNode)
+            } else {
+                this.clearFull()
+                this.draw()
+            }
     }
 
     // 删除某个节点匹配到的子树（只删除纵向）
