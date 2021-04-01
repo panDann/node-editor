@@ -7,7 +7,7 @@ export class BitNode<T extends Rect>  {
     constructor(data?: T) {
         this.data = data
     }
-    i = Date.now() + ''
+    i = performance.now() + ''
     height = 0
     left: BitNode<T> | null = null
     // right: BitNode<T> | null = null
@@ -49,14 +49,14 @@ type BitTreeOption = {
 
 }
 const _ass = Object.assign
-const minGap = 10,
+const minGap = 5,
     color = {
         primary: '#99CC66',
         warning: '#FF6666',
         dragPrimary: '#99cc6666',
         dragWarning: '#d60f0f5c'
     },
-    radius = 4,
+    radius = 6,
     fontSize = 20,
     lineWidth = 2
 const clickPos = { x: 0, y: 0 }
@@ -161,7 +161,7 @@ export class BitTree<T extends Rect> {
     }
     // @ts-ignore
     clearRect({ x, y, h, w } = this.root?.data) {
-        this.ctx?.clearRect(x - lineWidth, y - lineWidth, w + 2 * lineWidth, h + 2 * lineWidth)
+        this.ctx?.clearRect(x - radius, y - lineWidth, w + 2 * radius, h + 2 * lineWidth)
     }
     drawCover() {
         this.draw()
@@ -172,6 +172,8 @@ export class BitTree<T extends Rect> {
         drawRect(this.ctx as CanvasRenderingContext2D, this.coverPoint, this.isValidDrag(this.coverPoint) ? color.dragPrimary : color.dragWarning)
     }
     freezeCover(x: number, y: number) {
+        if (this.coverPoint.x == x && this.coverPoint.y == y) return //防止无意义点击
+
         if (this.isPointInCanvas(x, y)) {
             if (this.moveType == MoveType.cover && this.isValidCoverRect(this.coverPoint)) {
                 let coverPar: BitNode<T> | null = null,
@@ -188,12 +190,12 @@ export class BitTree<T extends Rect> {
                 })
                 const coverNode = new BitNode({ ...this.coverPoint })
                 // 处理包含了子节点情况
-                coverChildren.forEach((el, index) => {
+                for (const el of coverChildren) {
                     let tem = this.deleteSubTree(el.i)
                     if (tem !== -1)
                         // @ts-ignore
-                        nodeShouldPlace(coverNode, tem)
-                })
+                        nodeShouldPlace(this.moveNode, tem)
+                }
                 // @ts-ignore
                 nodeShouldPlace(coverPar, coverNode)
                 return
@@ -217,7 +219,7 @@ export class BitTree<T extends Rect> {
                     coverChildren: BitNode<T>[] = []
 
                 this.deleteSubTree(this.moveNode.i)
-                // @ts-ignore
+                // // @ts-ignore
                 this.traverse((t) => {
                     // @ts-ignore
                     if (rectInRect(t.data, this.coverPoint))
@@ -227,24 +229,27 @@ export class BitTree<T extends Rect> {
                         coverPar = t
                     return false
                 })
-                // 处理包含了子节点情况
-                coverChildren.forEach((el, index) => {
-                    let tem = this.deleteSubTree(el.i)
-                    if (tem !== -1)
-                        // @ts-ignore
-                        nodeShouldPlace(this.moveNode, tem)
-                })
+
+                // // 处理包含了子节点情况
+                // for (const el of coverChildren) {
+                //     let tem = this.deleteSubTree(el.i)
+                //     if (tem !== -1)
+                //         // @ts-ignore
+                //         nodeShouldPlace(this.moveNode, tem)
+                // }
+            
                 // @ts-ignore
                 nodeShouldPlace(coverPar, this.moveNode)
-                let preRect = { ...this.moveNode.data }
-                // @ts-ignore
-                this.clearRect(this.coverPoint)
+                // let preRect = { ...this.moveNode.data }
+                // // @ts-ignore
+                // this.clearRect(this.coverPoint)
                 // @ts-ignore
                 _ass(this.moveNode.data, { ...this.coverPoint })
                 // @ts-ignore
-                this.draw(this.moveNode, preRect)
+                // this.draw(this.moveNode, preRect)
                 this.moveNode = null
-                return
+                // return
+
             }
             this.draw()
             // 移除当前移动节点
@@ -279,7 +284,7 @@ export class BitTree<T extends Rect> {
             if (temNode.i == this.moveNode.i) continue//剔除拖动时与自身相交
 
             // @ts-ignore
-            if (rectCross(temNode?.data, this.coverPoint)) return false
+            if (rectCross(temNode?.data, this.coverPoint, radius)) return false
 
             if (temNode?.left) bitNodeS.push(temNode.left)
         }
@@ -314,7 +319,7 @@ const rectInRect = ({ x, y, w, h }: Rect, { x: tX, y: tY, w: tW, h: tH }: Rect,)
     return x > tX && x + w < tX + tW && y > tY && y + h < tY + tH
 }
 
-const rectCross = ({ x, y, w, h }: Rect, target: Rect) => {
+const rectCross = ({ x, y, w, h }: Rect, target: Rect, offset = 0) => {
     let rectangle = [false, false, false, false],
         reverseRect = [false, false, false, false]
     const { x: tX, y: tY, w: tW, h: tH } = target
@@ -338,33 +343,37 @@ const nodeShouldPlace = (parent: BitNode<any>, target: BitNode<any>) => {
     if (parent.left) {
         target.sibling = parent.left.sibling
         parent.left.sibling = target
-        return
     } else {
         parent.left = target
+        target.sibling = null
     }
-
-
 }
 
 const drawPath = (ctx: CanvasRenderingContext2D, { x, y, w, h }: Rect, reColor?: string) => {
     const pi = Math.PI
     ctx.beginPath()
+
     ctx.arc(x + minGap, y + minGap, minGap, pi, 3 * pi / 2)
     ctx.moveTo(x + minGap, y)
     ctx.lineTo(x + w - minGap, y)
 
     ctx.arc(x + w - minGap, y + minGap, minGap, 3 * pi / 2, 0)
+
     ctx.moveTo(x + w, y + minGap)
-
+    ctx.lineTo(x + w, y + h / 2 - radius)
+    ctx.arc(x + w, y + h / 2, radius, -pi / 2, 3 * pi / 2)//画关联节点
     ctx.lineTo(x + w, y + h - minGap)
-    ctx.arc(x + w - minGap, y + h - minGap, minGap, 0, pi / 2)
 
-    ctx.arc(x + minGap, y + h - minGap, minGap, pi / 2, pi )
+    ctx.arc(x + w - minGap, y + h - minGap, minGap, 0, pi / 2)
     ctx.moveTo(x + w - minGap, y + h)
     ctx.lineTo(x + minGap, y + h)
 
+    ctx.arc(x + minGap, y + h - minGap, minGap, pi / 2, pi)
     ctx.moveTo(x, y + h - minGap)
+    ctx.lineTo(x, y + h / 2)
+    ctx.arc(x, y + h / 2, radius, -pi / 2, 3 * pi / 2)//画关联节点
     ctx.lineTo(x, y + minGap)
+
     ctx.strokeStyle = reColor || color.primary
     ctx.lineWidth = lineWidth
     // ctx.lineJoin = 'round'
@@ -374,5 +383,4 @@ const drawPath = (ctx: CanvasRenderingContext2D, { x, y, w, h }: Rect, reColor?:
 const drawRect = (ctx: CanvasRenderingContext2D, { x, y, w, h }: Rect, reColor?: string) => {
     ctx.fillStyle = reColor || color.primary
     ctx.fillRect(x, y, w, h)
-
 }

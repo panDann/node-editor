@@ -43,7 +43,7 @@ export default function BitTreeCom(props: IProps) {
   }, [])
 
   const onDown = ({ target, clientX, clientY, button, ...rest }: MouseEvent<HTMLCanvasElement>) => {
-      props.bitTree.moveType = button
+    props.bitTree.moveType = button
       props.bitTree.getClickPosi(clientX,clientY)
     // @ts-ignore
       ref.current.addEventListener('mousemove', onMove)
@@ -60,7 +60,7 @@ export default function BitTreeCom(props: IProps) {
     <div className='bit-tree-container' >
       <canvas ref={ref} height={500}
         onContextMenu={(e) => e.preventDefault()}
-        onMouseDown={onDown}
+        onMouseDownCapture={onDown}
         width={1000} style={{ background: '#efe7e7' }} />
     </div>
   );
