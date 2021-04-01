@@ -347,17 +347,24 @@ const nodeShouldPlace = (parent: BitNode<any>, target: BitNode<any>) => {
 }
 
 const drawPath = (ctx: CanvasRenderingContext2D, { x, y, w, h }: Rect, reColor?: string) => {
+    const pi = Math.PI
     ctx.beginPath()
+    ctx.arc(x + minGap, y + minGap, minGap, pi, 3 * pi / 2)
     ctx.moveTo(x + minGap, y)
-    // ctx.arc(x+radius/2,y+radius/2,radius/2,0,Math.PI)
     ctx.lineTo(x + w - minGap, y)
+
+    ctx.arc(x + w - minGap, y + minGap, minGap, 3 * pi / 2, 0)
     ctx.moveTo(x + w, y + minGap)
-    ctx.lineTo(x + w, y + h-minGap)
+
+    ctx.lineTo(x + w, y + h - minGap)
+    ctx.arc(x + w - minGap, y + h - minGap, minGap, 0, pi / 2)
+
+    ctx.arc(x + minGap, y + h - minGap, minGap, pi / 2, pi )
     ctx.moveTo(x + w - minGap, y + h)
-    ctx.lineTo(x+minGap, y + h)
-    ctx.moveTo(x, y + h-minGap)
+    ctx.lineTo(x + minGap, y + h)
+
+    ctx.moveTo(x, y + h - minGap)
     ctx.lineTo(x, y + minGap)
-    // ctx.closePath()
     ctx.strokeStyle = reColor || color.primary
     ctx.lineWidth = lineWidth
     // ctx.lineJoin = 'round'
