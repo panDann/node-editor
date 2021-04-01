@@ -18,7 +18,7 @@ export class BitNode<T extends Rect>  {
     data: T | undefined = undefined
     innerText = 'node'
     children?: BitNode<T>[] = []
-    insertAt(direction: 'left' , dt?: T) {
+    insertAt(direction: 'left', dt?: T) {
         const n = new BitNode(dt)
         n.parent = this
         if (this[direction]) {
@@ -196,10 +196,9 @@ export class BitTree<T extends Rect> {
                 // 处理包含了子节点情况
                 coverChildren.forEach((el, index) => {
                     let tem = this.deleteSubTree(el.i)
-                    if (tem !== -1) {
+                    if (tem !== -1)
                         // @ts-ignore
                         nodeShouldPlace(coverNode, tem)
-                    }
                 })
                 // @ts-ignore
                 nodeShouldPlace(coverPar, coverNode)
@@ -207,18 +206,21 @@ export class BitTree<T extends Rect> {
             }
 
             if (this.moveType == MoveType.node && this.moveNode !== null && this.isValidDrag(this.coverPoint)) {
-
+                
                 //    更新子节点位置
-                this.traverse(t => {
+                const visit = (t:any) => {
                     // @ts-ignore
-                    if (t.i == this.moveNode?.i) return false
+                    // if (t.i === this.moveNode.i) return false
                     // @ts-ignore
                     const oLeft = t.data.x - this.moveNode?.data.x
                     // @ts-ignore
                     const oTop = t.data.y - this.moveNode?.data.y
                     _ass(t.data, { x: this.coverPoint.x + oLeft, y: this.coverPoint.y + oTop })
                     return false
-                }, this.moveNode)
+                }
+                this.moveNode.left&&this.traverse(visit, this.moveNode.left)
+                // this.moveNode.left&&this.traverse(visit, this.moveNode.left)
+                // this.moveNode.left?.sibling&&this.traverse(visit, this.moveNode.left.sibling)
 
                 // 更新拖动之后的节点位置
                 let coverPar: BitNode<T> | null = null
@@ -236,8 +238,6 @@ export class BitTree<T extends Rect> {
             this.moveNode = null
             this.draw()
         }
-
-
     }
 
     // 删除某个节点匹配到的子树（只删除纵向）
@@ -264,8 +264,6 @@ export class BitTree<T extends Rect> {
         bitNodeS.push(this.root)
         while (bitNodeS.length) {
             temNode = bitNodeS.pop()
-            // // @ts-ignore
-            if (temNode?.sibling) bitNodeS.push(temNode.sibling)
             // @ts-ignore
             if (temNode.i == this.moveNode.i)//剔除拖动时与自身相交
                 continue
@@ -273,8 +271,8 @@ export class BitTree<T extends Rect> {
                 // @ts-ignore
                 if (rectCross(temNode?.data, this.coverPoint)) return false
             }
-
             if (temNode?.left) bitNodeS.push(temNode.left)
+            if (temNode?.sibling) bitNodeS.push(temNode.sibling)
         }
         return true
     }
@@ -286,7 +284,7 @@ export class BitTree<T extends Rect> {
             if (x === 0 && y === 0) return false
             res = rectCross(target, { x, y, w, h })
             // res = tX < x + w && tX + tW > x && tY > y + h && tY + tH < y
-            return rectCross(target, { x, y, w, h })
+            return res
         })
         return !res
     }
@@ -330,12 +328,15 @@ const rectCross = ({ x, y, w, h }: Rect, target: Rect) => {
 }
 
 const nodeShouldPlace = (parent: BitNode<any>, target: BitNode<any>) => {
-    if (!parent.left) {
-        parent.left = target
+    if (parent.left) {
+        target.sibling = parent.left.sibling
+        parent.left.sibling = target
         return
+    }else{
+        parent.left = target
     }
-    target.sibling = parent.sibling
-    parent.sibling = target
+
+
 }
 
 const drawPath = (ctx: CanvasRenderingContext2D, { x, y, w, h }: Rect, reColor?: string) => {
