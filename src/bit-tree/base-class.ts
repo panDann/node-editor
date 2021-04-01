@@ -18,17 +18,21 @@ export class BitNode<T extends Rect>  {
     data: T | undefined = undefined
     innerText = 'node'
     children?: BitNode<T>[] = []
-    insertAt(direction: 'left', dt?: T) {
+    insertAtLeft(dt: T) {
         const n = new BitNode(dt)
         n.parent = this
-        if (this[direction]) {
-            //@ts-ignore
-            this[direction].parent = n
-            n[direction] = this[direction]
-            //@ts-ignore
-            n.height = this[direction].height + 1
+        if (this.left) {
+            this['left'].parent = n
+            n['left'] = this['left']
+            // n.height = this['left'].height + 1
         }
-        this[direction] = n
+        this.left = n
+        // this.uHeight(this)
+    }
+    insertAtSibling(dt: T) {
+        const n = new BitNode(dt)
+        this.sibling = n
+        // n.parent = this.parent
         // this.uHeight(this)
     }
     // uHeight(bn: BitNode<T>) {
@@ -98,13 +102,10 @@ export class BitTree<T extends Rect> {
         return -1
     }
     insertLeftAt(origin: BitNode<T>, target: T) {
-        origin.insertAt('left', target)
+        origin.insertAtLeft(target)
     }
-
     insertSiblingAt(origin: BitNode<T>, target: T) {
-        const n = new BitNode(target)
-        n.sibling = origin.sibling
-        origin.sibling = n
+        origin.insertAtSibling(target)
     }
     isRoot() {
         return
@@ -188,13 +189,13 @@ export class BitTree<T extends Rect> {
                         coverPar = t
                     return false
                 })
+
                 const coverNode = new BitNode({ ...this.coverPoint })
                 // 处理包含了子节点情况
                 for (const el of coverChildren) {
                     let tem = this.deleteSubTree(el.i)
-                    if (tem !== -1)
-                        // @ts-ignore
-                        nodeShouldPlace(this.moveNode, tem)
+                    // @ts-ignore
+                    tem !== -1 && nodeShouldPlace(coverNode, tem)
                 }
                 // @ts-ignore
                 nodeShouldPlace(coverPar, coverNode)
@@ -217,7 +218,6 @@ export class BitTree<T extends Rect> {
                 // 更新拖动之后的节点位置
                 let coverPar: BitNode<T> | null = null,
                     coverChildren: BitNode<T>[] = []
-
                 this.deleteSubTree(this.moveNode.i)
                 // // @ts-ignore
                 this.traverse((t) => {
@@ -229,15 +229,17 @@ export class BitTree<T extends Rect> {
                         coverPar = t
                     return false
                 })
+                // @ts-ignore
+                if (this.moveNode.parent.i !== coverPar.i) {
+                    this.moveNode.sibling = null
+                }
+                // 处理包含了子节点情况
+                for (const el of coverChildren) {
+                    let tem = this.deleteSubTree(el.i)
+                    // @ts-ignore
+                    tem !== -1 && nodeShouldPlace(this.moveNode, tem)
+                }
 
-                // // 处理包含了子节点情况
-                // for (const el of coverChildren) {
-                //     let tem = this.deleteSubTree(el.i)
-                //     if (tem !== -1)
-                //         // @ts-ignore
-                //         nodeShouldPlace(this.moveNode, tem)
-                // }
-            
                 // @ts-ignore
                 nodeShouldPlace(coverPar, this.moveNode)
                 // let preRect = { ...this.moveNode.data }
@@ -340,12 +342,14 @@ const rectCross = ({ x, y, w, h }: Rect, target: Rect, offset = 0) => {
 }
 
 const nodeShouldPlace = (parent: BitNode<any>, target: BitNode<any>) => {
+
     if (parent.left) {
         target.sibling = parent.left.sibling
         parent.left.sibling = target
+        target.parent = parent
     } else {
         parent.left = target
-        target.sibling = null
+        target.parent = parent
     }
 }
 
