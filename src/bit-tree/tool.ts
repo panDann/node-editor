@@ -75,6 +75,7 @@ export const drawPath = (ctx: CanvasRenderingContext2D, { x, y, w, h }: Rect, re
     ctx.moveTo(x + w, y + minGap)
     ctx.lineTo(x + w, y + h / 2 - radius)
     ctx.arc(x + w, y + h / 2, radius, -pi / 2, 3 * pi / 2)//画关联节点
+    ctx.moveTo(x + w, y + h / 2 + radius) //移动到节点下方
     ctx.lineTo(x + w, y + h - minGap)
 
     ctx.arc(x + w - minGap, y + h - minGap, minGap, 0, pi / 2)
@@ -83,8 +84,9 @@ export const drawPath = (ctx: CanvasRenderingContext2D, { x, y, w, h }: Rect, re
 
     ctx.arc(x + minGap, y + h - minGap, minGap, pi / 2, pi)
     ctx.moveTo(x, y + h - minGap)
-    ctx.lineTo(x, y + h / 2)
-    ctx.arc(x, y + h / 2, radius, -pi / 2, 3 * pi / 2)//画关联节点
+    ctx.lineTo(x, y + h / 2 + radius)
+    ctx.arc(x, y + h / 2, radius, pi / 2, 5 * pi / 2)//画关联节点
+    ctx.moveTo(x, y + h / 2 - radius) //移动到节点下方
     ctx.lineTo(x, y + minGap)
 
     ctx.strokeStyle = reColor || color.primary

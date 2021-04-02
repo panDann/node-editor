@@ -201,6 +201,7 @@ export class BitTree<T extends Rect> {
         drawPath(this.ctx as CanvasRenderingContext2D, this.coverPoint, this.isValidCoverRect(this.coverPoint) ? color.primary : color.warning)
     }
     drawDragCover() {
+        // window.requestAnimationFrame(this.drawDragCover)
         this.draw()
         drawRect(this.ctx as CanvasRenderingContext2D, this.coverPoint, this.isValidDrag(this.coverPoint) ? color.dragPrimary : color.dragWarning)
     }
