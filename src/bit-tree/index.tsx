@@ -35,26 +35,26 @@ export default function BitTreeCom(props: IProps) {
     bitTree.init(ref.current as HTMLCanvasElement)
     bitTree.draw()
     // @ts-ignore
-    document.addEventListener('mouseup', onMoveUp)
+    document.addEventListener('mouseup', onDocUp)
     return () => {
       // @ts-ignore
-      document?.removeEventListener('mouseup', onMoveUp)
+      document?.removeEventListener('mouseup', onDocUp)
     }
   }, [])
 
   const onDown = ({ target, clientX, clientY, button, ...rest }: MouseEvent<HTMLCanvasElement>) => {
-    props.bitTree.moveType = button
-      props.bitTree.getClickPosi(clientX,clientY)
+    // props.bitTree.moveType = button
+    props.bitTree.getClickPosi(clientX, clientY, button)
     // @ts-ignore
-      ref.current.addEventListener('mousemove', onMove)
+    ref.current.addEventListener('mousemove', onMove)
   }
   const onMove = (e: MouseEvent) => {
-    props.bitTree.getMovePosi(e.clientX,e.clientY)
+    props.bitTree.getMovePosi(e.clientX, e.clientY)
   }
-  const onMoveUp = ({ clientX: x, clientY: y }: MouseEvent) => {
+  const onDocUp = ({ clientX: x, clientY: y }: MouseEvent) => {
     // @ts-ignore
     ref.current.removeEventListener('mousemove', onMove)
-    props.bitTree.freezeCover(x,y)
+    props.bitTree.freezeCover(x, y)
   }
   return (
     <div className='bit-tree-container' >

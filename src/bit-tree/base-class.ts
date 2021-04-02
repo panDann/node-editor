@@ -135,12 +135,14 @@ export class BitTree<T extends Rect> {
         // @ts-ignore
         return pointInRect(this.root?.data, x, y)
     }
-    getClickPosi(x: number, y: number) {
+    getClickPosi(x: number, y: number, whichBtn: number) {
         _ass(clickPos, { x, y })
+        this.moveType = whichBtn
         // @ts-ignore
         let clickNode = null,
             // @ts-ignore
             rectArea = this.root.data.w * this.root.data?.h
+
         if (this.moveType == MoveType.node) {
             this.traverse(t => {
                 // @ts-ignore
@@ -212,7 +214,6 @@ export class BitTree<T extends Rect> {
                 return
             }
             if (this.moveType == MoveType.node && this.moveNode !== null && this.isValidDrag(this.coverPoint)) {
-
                 for (const el of this.moveNodeChildren) {
                     // @ts-ignore
                     const oLeft = el.data.x - this.moveNode?.data.x
@@ -221,19 +222,11 @@ export class BitTree<T extends Rect> {
                     _ass(el.data, { x: this.coverPoint.x + oLeft, y: this.coverPoint.y + oTop })
                 }
                 _ass(this.moveNode.data, { ...this.coverPoint })
-                this.moveNode = null
-                this.moveNodeChildren = []
-                // let preRect = { ...this.moveNode.data }
-                // // @ts-ignore
-                // this.clearRect(this.coverPoint)
-                // @ts-ignore
-                // @ts-ignore
-                // this.draw(this.moveNode, preRect)
-                // return
             }
-            this.draw()
-            // 移除当前移动节点
         }
+        this.moveNode = null
+        this.moveNodeChildren = []
+        this.draw()
     }
     // 删除某个节点匹配到的子树（只删除当前节点与左侧子树）
     deleteSubTree(i: string): (BitNode<T> | number) {
