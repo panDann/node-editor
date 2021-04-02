@@ -3,6 +3,16 @@ import {
     Rect,
     MoveType
 } from './types'
+
+import {
+    calcRec,
+    pointInRect,
+    rectCross,
+    rectInRect,
+    nodeShouldPlace,
+    drawPath,
+    drawRect
+} from './tool'
 export class BitNode<T extends Rect>  {
     constructor(data?: T) {
         this.data = data
@@ -48,7 +58,7 @@ export class BitNode<T extends Rect>  {
     //     }
     // }
 }
-
+type PartialBitNode<T extends Rect> = Partial<BitNode<T>>
 type BitTreeOption = {
 
 }
@@ -69,7 +79,7 @@ export class BitTree<T extends Rect> {
     constructor(root: BitNode<T>) {
         this.root = root
     }
-    root: BitNode<T> | null = null
+    root: Partial<BitNode<T>> = {}
     moveType = 2
     // canvasEL: HTMLCanvasElement | null = null
     coverPoint = { x: 0, y: 0, h: 0, w: 0 }
@@ -84,10 +94,7 @@ export class BitTree<T extends Rect> {
 
     }
     height() {
-        if (this.root)
-            //@ts-ignore
-            return this.root.height
-        return -1
+        return this.root.height || -1
     }
     traverse(visit: (target: BitNode<T>) => boolean, tree = this.root): BitNode<T> | number {
         let bitNodeS = [], temNode = null
@@ -304,87 +311,4 @@ export class BitTree<T extends Rect> {
         })
         return !res
     }
-}
-const pointInRect = ({ x, y, w, h }: Rect, pX: number, pY: number,) => {
-    return pX > x && pX < x + w && pY > y && pY < y + h
-}
-const calcRec = (start: Posi, end: Posi): Rect => {
-    const h = Math.abs(start.y - end.y)
-    const w = Math.abs(start.x - end.x)
-    if (end.x < start.x && end.y < start.y) return _ass(end, { h, w })
-    if (end.x > start.x && end.y > start.y) return _ass(start, { h, w })
-    if (end.x < start.x && end.y > start.y) return { h, w, x: end.x, y: start.y }
-    if (end.x > start.x && end.y < start.y) return { h, w, x: start.x, y: end.y }
-    return { x: 0, y: 0, w: 0, h: 0 }
-}
-const rectInRect = ({ x, y, w, h }: Rect, { x: tX, y: tY, w: tW, h: tH }: Rect,) => {
-    return x > tX && x + w < tX + tW && y > tY && y + h < tY + tH
-}
-
-const rectCross = ({ x, y, w, h }: Rect, target: Rect, offset = 0) => {
-    let rectangle = [false, false, false, false],
-        reverseRect = [false, false, false, false]
-    const { x: tX, y: tY, w: tW, h: tH } = target
-    rectangle = [
-        pointInRect(target, x, y),
-        pointInRect(target, x + w, y),
-        pointInRect(target, x + w, y + h),
-        pointInRect(target, x, y + h),
-    ]
-    reverseRect = [
-        pointInRect({ x, y, w, h }, tX, tY),
-        pointInRect({ x, y, w, h }, tX + tW, tY),
-        pointInRect({ x, y, w, h }, tX + tW, tY + tH),
-        pointInRect({ x, y, w, h }, tX, tY + tH),
-    ]
-    return (rectangle.some(el => el === false) && rectangle.some(el => el === true))
-        || (reverseRect.some(el => el === false) && reverseRect.some(el => el === true))
-}
-
-const nodeShouldPlace = (parent: BitNode<any>, target: BitNode<any>) => {
-
-    if (parent.left) {
-        target.sibling = parent.left.sibling
-        parent.left.sibling = target
-        target.parent = parent
-    } else {
-        parent.left = target
-        target.parent = parent
-    }
-}
-
-const drawPath = (ctx: CanvasRenderingContext2D, { x, y, w, h }: Rect, reColor?: string) => {
-    const pi = Math.PI
-    ctx.beginPath()
-
-    ctx.arc(x + minGap, y + minGap, minGap, pi, 3 * pi / 2)
-    ctx.moveTo(x + minGap, y)
-    ctx.lineTo(x + w - minGap, y)
-
-    ctx.arc(x + w - minGap, y + minGap, minGap, 3 * pi / 2, 0)
-
-    ctx.moveTo(x + w, y + minGap)
-    ctx.lineTo(x + w, y + h / 2 - radius)
-    ctx.arc(x + w, y + h / 2, radius, -pi / 2, 3 * pi / 2)//画关联节点
-    ctx.lineTo(x + w, y + h - minGap)
-
-    ctx.arc(x + w - minGap, y + h - minGap, minGap, 0, pi / 2)
-    ctx.moveTo(x + w - minGap, y + h)
-    ctx.lineTo(x + minGap, y + h)
-
-    ctx.arc(x + minGap, y + h - minGap, minGap, pi / 2, pi)
-    ctx.moveTo(x, y + h - minGap)
-    ctx.lineTo(x, y + h / 2)
-    ctx.arc(x, y + h / 2, radius, -pi / 2, 3 * pi / 2)//画关联节点
-    ctx.lineTo(x, y + minGap)
-
-    ctx.strokeStyle = reColor || color.primary
-    ctx.lineWidth = lineWidth
-    // ctx.lineJoin = 'round'
-    ctx.stroke()
-    return false
-}
-const drawRect = (ctx: CanvasRenderingContext2D, { x, y, w, h }: Rect, reColor?: string) => {
-    ctx.fillStyle = reColor || color.primary
-    ctx.fillRect(x, y, w, h)
 }
