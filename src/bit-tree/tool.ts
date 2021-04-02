@@ -52,8 +52,8 @@ export const rectCross = ({ x, y, w, h }: Rect, target: Rect, offset = 0) => {
 export const nodeShouldPlace = (parent: BitNode<any>, target: BitNode<any>) => {
 
     if (parent.left) {
-        target.sibling = parent.left.sibling
-        parent.left.sibling = target
+        target.right = parent.left.right
+        parent.left.right = target
         target.parent = parent
     } else {
         parent.left = target

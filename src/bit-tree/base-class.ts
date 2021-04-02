@@ -13,35 +13,37 @@ import {
     drawPath,
     drawRect
 } from './tool'
+type CommonBitNode<T extends Rect> = BitNode<T> | null
 export class BitNode<T extends Rect>  {
     constructor(data?: T) {
         this.data = data
     }
     i = performance.now() + ''
     height = 0
-    left: BitNode<T> | null = null
+    left: CommonBitNode<T> = null
+    right: CommonBitNode<T> = null
+    parent: CommonBitNode<T> = null
     // right: BitNode<T> | null = null
-    parent: BitNode<T> | null = null
-    sibling: BitNode<T> | null = null
 
     status: 'single' | 'link' = 'single'
     data: T | undefined = undefined
     innerText = 'node'
     children?: BitNode<T>[] = []
-    insertAtLeft(dt: T) {
+    insertAt(direction: 'left' | 'right', dt: T) {
         const n = new BitNode(dt)
         n.parent = this
-        if (this.left) {
-            this['left'].parent = n
-            n['left'] = this['left']
+        if (this[direction]) {
+            //@ts-ignore
+            this[direction].parent = n
+            n[direction] = this[direction]
             // n.height = this['left'].height + 1
         }
         this.left = n
         // this.uHeight(this)
     }
-    insertAtSibling(dt: T) {
+    insertAtright(dt: T) {
         const n = new BitNode(dt)
-        this.sibling = n
+        this.right = n
         // n.parent = this.parent
         // this.uHeight(this)
     }
@@ -58,7 +60,6 @@ export class BitNode<T extends Rect>  {
     //     }
     // }
 }
-type PartialBitNode<T extends Rect> = Partial<BitNode<T>>
 type BitTreeOption = {
 
 }
@@ -79,7 +80,7 @@ export class BitTree<T extends Rect> {
     constructor(root: BitNode<T>) {
         this.root = root
     }
-    root: Partial<BitNode<T>> = {}
+    root: BitNode<T> | null = null
     moveType = 2
     // canvasEL: HTMLCanvasElement | null = null
     coverPoint = { x: 0, y: 0, h: 0, w: 0 }
@@ -94,7 +95,14 @@ export class BitTree<T extends Rect> {
 
     }
     height() {
-        return this.root.height || -1
+        return this.root?.height || -1
+    }
+    collectRight(n: BitNode<T> | null, S: (BitNode<T> | null)[]) {
+        let r = n
+        while (r) {
+            S.push(r.right)
+            r = r.left
+        }
     }
     traverse(visit: (target: BitNode<T>) => boolean, tree = this.root): BitNode<T> | number {
         let bitNodeS = [], temNode = null
@@ -103,19 +111,19 @@ export class BitTree<T extends Rect> {
             temNode = bitNodeS.pop()
             // @ts-ignore
             if (visit(temNode)) return temNode
-            if (temNode?.sibling) bitNodeS.push(temNode.sibling)
+            if (temNode?.right) bitNodeS.push(temNode.right)
             if (temNode?.left) bitNodeS.push(temNode.left)
         }
         return -1
     }
     insertLeftAt(origin: BitNode<T>, target: T) {
-        origin.insertAtLeft(target)
+        origin.insertAt('left', target)
     }
-    insertSiblingAt(origin: BitNode<T>, target: T) {
-        origin.insertAtSibling(target)
+    insertRightAt(origin: BitNode<T>, target: T) {
+        origin.insertAt('right', target)
     }
     isRoot() {
-        return
+        return this.root
     }
     init(canvasEL: HTMLCanvasElement) {
         const { width, height, x, y } = canvasEL.getBoundingClientRect()
@@ -238,7 +246,7 @@ export class BitTree<T extends Rect> {
                 })
                 // @ts-ignore
                 if (this.moveNode.parent.i !== coverPar.i) {
-                    this.moveNode.sibling = null
+                    this.moveNode.right = null
                 }
                 // 处理包含了子节点情况
                 for (const el of coverChildren) {
@@ -273,9 +281,9 @@ export class BitTree<T extends Rect> {
                 t.left = null
                 return true
             }
-            if (t.sibling !== null && t.sibling.i == i) {
-                sub = t.sibling
-                t.sibling = t.sibling.sibling
+            if (t.right !== null && t.right.i == i) {
+                sub = t.right
+                t.right = t.right.right
                 return true
             }
             return false
@@ -288,7 +296,7 @@ export class BitTree<T extends Rect> {
         bitNodeS.push(this.root)
         while (bitNodeS.length) {
             temNode = bitNodeS.pop()
-            if (temNode?.sibling) bitNodeS.push(temNode.sibling)
+            if (temNode?.right) bitNodeS.push(temNode.right)
             // @ts-ignore
             if (temNode.i == this.moveNode.i) continue//剔除拖动时与自身相交
 
