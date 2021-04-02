@@ -9,9 +9,10 @@ import {
     pointInRect,
     rectCross,
     rectInRect,
-    nodeShouldPlace,
     drawPath,
-    drawRect
+    drawRect,
+    radius,
+    color
 } from './tool'
 type CommonBitNode<T extends Rect> = BitNode<T> | null
 export class BitNode<T extends Rect>  {
@@ -64,16 +65,7 @@ type BitTreeOption = {
 
 }
 const _ass = Object.assign
-const minGap = 5,
-    color = {
-        primary: '#99CC66',
-        warning: '#FF6666',
-        dragPrimary: '#99cc6666',
-        dragWarning: '#d60f0f5c'
-    },
-    radius = 6,
-    fontSize = 20,
-    lineWidth = 2
+
 const clickPos = { x: 0, y: 0 }
 export class BitTree<T extends Rect> {
 
@@ -88,15 +80,11 @@ export class BitTree<T extends Rect> {
     moveNodeChildren: BitNode<T>[] = []
     moveOffsetTop = 0
     moveOffsetLeft = 0
+    offsetTop = 0
+    offsetLeft = 0
     ctx: CanvasRenderingContext2D | null = null
     isEmpty() {
         return this.root === null
-    }
-    size() {
-
-    }
-    height() {
-        return this.root?.height || -1
     }
     collectRight(n: BitNode<T> | null, S: (BitNode<T> | null)[]) {
         let r = n
@@ -123,26 +111,32 @@ export class BitTree<T extends Rect> {
     insertRightAt(origin: BitNode<T>, target: T) {
         origin.insertAt('right', target)
     }
-    isRoot() {
-        return this.root
-    }
     init(canvasEL: HTMLCanvasElement) {
         const { width, height, x, y } = canvasEL.getBoundingClientRect()
+        this.offsetLeft = x
+        this.offsetTop = y
         this.ctx = canvasEL.getContext('2d')
-        _ass(this.root?.data, { w: width, h: height })
+        _ass(this.root?.data, { w: width, h: height, })
+    }
+    isRoot(t: BitNode<T>) {
+        return t.parent == null
     }
     isPointInCanvas(x: number, y: number) {
         // @ts-ignore
         return pointInRect(this.root?.data, x, y)
     }
     getClickPosi(x: number, y: number, whichBtn: number) {
+        // @ts-ignore
+        x = x - this.offsetLeft
+        // @ts-ignore
+        y = y - this.offsetTop
+
         _ass(clickPos, { x, y })
         this.moveType = whichBtn
         // @ts-ignore
         let clickNode = null,
             // @ts-ignore
             rectArea = this.root.data.w * this.root.data?.h
-
         if (this.moveType == MoveType.node) {
             this.traverse(t => {
                 // @ts-ignore
@@ -172,7 +166,10 @@ export class BitTree<T extends Rect> {
     }
     // 获取移动坐标
     getMovePosi(x: number, y: number) {
-
+        // @ts-ignore
+        x = x - this.offsetLeft
+        // @ts-ignore
+        y = y - this.offsetTop
         if (this.moveType == MoveType.cover) {
             this.coverPoint = calcRec(clickPos, { x, y })
             this.drawCover()
@@ -190,11 +187,14 @@ export class BitTree<T extends Rect> {
     draw(treeRoot = this.root, clearRect = this.root?.data) {
         this.clearRect(clearRect)
         // @ts-ignore
-        this.traverse(({ data: { x, y, w, h } }: BitNode<Rect>) => drawPath(this.ctx as CanvasRenderingContext2D, { x, y, w, h }), treeRoot)
+        this.traverse(({ data: { x, y, w, h }, parent }: BitNode<Rect>) => {
+            if (parent == null) return false
+            drawPath(this.ctx as CanvasRenderingContext2D, { x, y, w, h })
+        }, treeRoot)
     }
     // @ts-ignore
     clearRect({ x, y, h, w } = this.root?.data) {
-        this.ctx?.clearRect(x - radius, y - lineWidth, w + 2 * radius, h + 2 * lineWidth)
+        this.ctx?.clearRect(x, y, w, h)
     }
     drawCover() {
         this.draw()
@@ -233,16 +233,6 @@ export class BitTree<T extends Rect> {
     deleteSubTree(i: string): (BitNode<T> | number) {
         let sub: any = -1
         this.traverse(t => {
-            if (t.left !== null && t.left.i == i) {
-                sub = t.left
-                t.left = null
-                return true
-            }
-            if (t.right !== null && t.right.i == i) {
-                sub = t.right
-                t.right = t.right.right
-                return true
-            }
             return false
         })
         return sub

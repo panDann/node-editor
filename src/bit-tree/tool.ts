@@ -2,15 +2,15 @@
 import { Rect, Posi } from './types'
 import { BitNode } from './base-class'
 const minGap = 5,
-    color = {
-        primary: '#99CC66',
-        warning: '#FF6666',
-        dragPrimary: '#99cc6666',
-        dragWarning: '#d60f0f5c'
-    },
-    radius = 6,
     fontSize = 20,
     lineWidth = 2
+export const radius = 4
+export const color = {
+    primary: '#99CC66',
+    warning: '#FF6666',
+    dragPrimary: '#99cc6666',
+    dragWarning: '#d60f0f5c'
+}
 export const _ass = Object.assign
 
 export const pointInRect = ({ x, y, w, h }: Rect, pX: number, pY: number,) => {
