@@ -26,6 +26,7 @@ export const calcRec = (start: Posi, end: Posi): Rect => {
     return { x: 0, y: 0, w: 0, h: 0 }
 }
 export const rectInRect = ({ x, y, w, h }: Rect, { x: tX, y: tY, w: tW, h: tH }: Rect,) => {
+
     return x > tX && x + w < tX + tW && y > tY && y + h < tY + tH
 }
 
