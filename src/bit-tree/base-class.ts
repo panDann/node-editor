@@ -1,58 +1,34 @@
 import {
     Posi,
     Rect,
-    ActionType
+    LinkNodeMsg,
+    ActionType,
+    BitNode
 } from './types'
 
 import {
-    calcRec,
+    calcRec, swap,
     pointInRect,
     pointInCircle,
     rectCross,
     rectInRect,
-    drawPath,
+    drawPath, drawLink,
     drawRect,
     drawCircle,
     radius,
     color
 } from './tool'
-type CommonBitNode<T extends Rect> = BitNode<T> | null
-export class BitNode<T extends Rect>  {
-    constructor(data?: T) {
-        this.data = data
-    }
-    i = performance.now() + ''
-    height = 0
-    left: CommonBitNode<T> = null
-    right: CommonBitNode<T> = null
-    parent: CommonBitNode<T> = null
-    status: 'single' | 'link' = 'single'
-    data: T | undefined = undefined
-    innerText = 'node'
-    children?: BitNode<T>[] = []
-    insertAt(direction: 'left' | 'right', dt: T) {
-        const n = new BitNode(dt)
-        n.parent = this
-        if (this[direction]) {
-            //@ts-ignore
-            this[direction].parent = n
-            n[direction] = this[direction]
-        }
-        this[direction] = n
-    }
-}
-type BitTreeOption = {
+import { time } from 'echarts/core'
 
-}
+let linkNodeStack: BitNode<any>[] = []
 const _ass = Object.assign
-
 const clickPos = { x: 0, y: 0 }
 export class BitTree<T extends Rect> {
     constructor(root: BitNode<T>) {
         this.root = root
     }
     root: BitNode<T> | null = null
-    actionType = 2
+    actionType = -1
     // canvasEL: HTMLCanvasElement | null = null
     coverPoint = { x: 0, y: 0, h: 0, w: 0 }
     move = {
@@ -62,19 +38,14 @@ export class BitTree<T extends Rect> {
         moveOffsetLeft: 0,
     }
 
+    linkNodeMsg: LinkNodeMsg<T>[] = []
     offsetTop = 0//画布顶点偏移量
     offsetLeft = 0
     ctx: CanvasRenderingContext2D | null = null
     isEmpty() {
         return this.root === null
     }
-    collectRight(n: BitNode<T> | null, S: (BitNode<T> | null)[]) {
-        let r = n
-        while (r) {
-            S.push(r.right)
-            r = r.left
-        }
-    }
+
     traverse(visit: (target: BitNode<T>) => boolean, tree = this.root): BitNode<T> | number {
         let bitNodeS = [], temNode = null
         bitNodeS.push(tree)
@@ -113,12 +84,14 @@ export class BitTree<T extends Rect> {
     resetAction() {
         this.actionType = ActionType.none
     }
-    // fixOffset() {
-
-    // }
-    getClickPosi(x: number, y: number, whichBtn: number) {
-        x = x - this.offsetLeft
-        y = y - this.offsetTop
+    fixOffset({ x, y }: Posi) {
+        return {
+            x: x - this.offsetLeft,
+            y: y - this.offsetTop
+        }
+    }
+    getClickPosi(posi: Posi, whichBtn: number) {
+        const { x, y } = this.fixOffset(posi)
         _ass(clickPos, { x, y })
         switch (whichBtn) {
             case ActionType.node:
@@ -128,18 +101,18 @@ export class BitTree<T extends Rect> {
                     rectArea = this.root.data.w * this.root.data?.h
                 // if clicking edge's point
                 this.traverse(t => {
-
                     // @ts-ignore
                     const { x: tX, y: tY, w, h } = t.data
                     if (pointInCircle({ x, y }, { x: tX, y: tY + h / 2 })) {
                         _ass(isClickEdgePoint, { x: tX, y: tY + h / 2 })
+                        linkNodeStack.push(t)
                         return true
                     }
                     if (pointInCircle({ x, y }, { x: tX + w, y: tY + h / 2 })) {
                         _ass(isClickEdgePoint, { x: tX + w, y: tY + h / 2 })
+                        linkNodeStack.push(t)
                         return true
                     }
-
                     // @ts-ignore
                     let temArea = w * h
                     // @ts-ignore
@@ -161,8 +134,7 @@ export class BitTree<T extends Rect> {
                     this.setAction('node')
                     this.traverse((t) => {
                         // @ts-ignore
-                        if (rectInRect(t.data, clickNode.data))
-                            this.move.moveNodeChildren.push(t)
+                        rectInRect(t.data, clickNode.data) && this.move.moveNodeChildren.push(t)
                         return false
                     })
                     this.move.moveOffsetLeft = x - clickNode.data.x
@@ -178,11 +150,8 @@ export class BitTree<T extends Rect> {
         }
     }
     // 获取移动坐标
-    getMovePosi(x: number, y: number) {
-        // @ts-ignore
-        x = x - this.offsetLeft
-        // @ts-ignore
-        y = y - this.offsetTop
+    getMovePosi(posi: Posi,) {
+        const { x, y } = this.fixOffset(posi)
         if (this.actionType == ActionType.cover) {
             this.coverPoint = calcRec(clickPos, { x, y })
             this.drawCover()
@@ -194,24 +163,26 @@ export class BitTree<T extends Rect> {
                 this.drawDragCover()
             }
     }
-    freezeCover(x: number, y: number) {
-        if (this.coverPoint.x == x && this.coverPoint.y == y) return //防止无意义点击
+    freezeCover(posi: Posi,) {
+        const { x, y } = this.fixOffset(posi)
         if (!this.isPointInCanvas(x, y)) return
 
         switch (this.actionType) {
             case ActionType.cover:
+                if (clickPos.x == x && clickPos.y == y) return //防止无意义点击
                 // @ts-ignore
                 this.isValidCoverRect(this.coverPoint) && this.insertRightAt(this.root, { ...this.coverPoint })
                 this.reset()
                 break;
             case ActionType.node:
+                if (clickPos.x == x && clickPos.y == y) return //防止无意义点击
 
                 if (this.isValidDrag(this.coverPoint)) {
                     for (const el of this.move.moveNodeChildren) {
                         // @ts-ignore
-                        const oLeft = el.data.x - this.move.moveNode?.data.x
+                        const oLeft = el.data.x - this.move.moveNode.data.x
                         // @ts-ignore
-                        const oTop = el.data.y - this.move.moveNode?.data.y
+                        const oTop = el.data.y - this.move.moveNode.data.y
                         _ass(el.data, { x: this.coverPoint.x + oLeft, y: this.coverPoint.y + oTop })
                     }
                     // @ts-ignore
@@ -220,15 +191,27 @@ export class BitTree<T extends Rect> {
                 this.reset()
                 break;
             case ActionType.edgePoint:
+                if (linkNodeStack.length === 2) {
+                    const [targetNode, destNode] = linkNodeStack
+                    if (targetNode.data.x > destNode.data.x) {
+                        swap(targetNode, destNode)
+                    }
+                    this.linkNodeMsg.push({
+                        targetNode,
+                        destNode,
+                        status: 'left'
+                    })
+                    this.reset()
+                }
                 break
             default:
                 break;
         }
-
     }
     reset() {
         this.move.moveNode = null
         this.move.moveNodeChildren = []
+        linkNodeStack = []
         this.resetAction()
         this.draw()
     }
@@ -236,13 +219,30 @@ export class BitTree<T extends Rect> {
         // @ts-ignore
         return !rectInRect({ x, y, w, h }, this.root?.data)
     }
-    draw(treeRoot = this.root, clearRect = this.root?.data) {
-        this.clearRect(clearRect)
+    draw() {
+        this.clearRect()
+        const linkNodeArr = []
         // @ts-ignore
-        this.traverse(({ data: { x, y, w, h }, parent }: BitNode<Rect>) => {
-            if (parent == null) return false
+        this.root?.right && this.traverse(({ data: { x, y, w, h }, parent }: BitNode<Rect>) => {
             drawPath(this.ctx as CanvasRenderingContext2D, { x, y, w, h })
-        }, treeRoot)
+        }, this.root?.right)
+        this.drawLinkMsg()
+    }
+    drawLinkMsg() {
+        this.linkNodeMsg.forEach(t => {
+            // @ts-ignore
+            const { targetNode: { data: { x: tX, y: tY, w: tW, h: tH } }, destNode: { data: { x: dX, y: dY, w: dW, h: dH } }, status } = t
+            const moveTo = { x: tX + tW + radius, y: tY + tH / 2 }
+            const final = { x: dX - radius, y: dY + dH / 2 }
+            const offset = Math.min(100, Math.abs(moveTo.y - final.y))
+            // @ts-ignore
+            drawLink(this.ctx, {
+                moveTo,
+                m1: { x: moveTo.x + offset, y: moveTo.y },
+                m2: { x: final.x - offset, y: final.y },
+                final,
+            }, color.primary)
+        })
     }
     // @ts-ignore
     clearRect({ x, y, h, w } = this.root?.data) {

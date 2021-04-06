@@ -1,6 +1,5 @@
 
-import { Rect, Posi } from './types'
-import { BitNode } from './base-class'
+import { Rect, Posi, BitNode } from './types'
 const minGap = 5,
     fontSize = 20,
     lineWidth = 2
@@ -12,6 +11,11 @@ export const color = {
     dragWarning: '#d60f0f5c'
 }
 export const _ass = Object.assign
+export const swap = (origin: any, dest: any) => {
+    let tem = origin
+    origin = dest
+    dest = tem
+}
 
 export const pointInRect = ({ x, y, w, h }: Rect, pX: number, pY: number,) => {
     return pX > x && pX < x + w && pY > y && pY < y + h
@@ -69,6 +73,8 @@ export const nodeShouldPlace = (parent: BitNode<any>, target: BitNode<any>) => {
 export const drawPath = (ctx: CanvasRenderingContext2D, { x, y, w, h }: Rect, reColor?: string) => {
     const pi = Math.PI
     ctx.beginPath()
+    ctx.strokeStyle = reColor || color.primary
+    ctx.lineWidth = lineWidth
 
     ctx.arc(x + minGap, y + minGap, minGap, pi, 3 * pi / 2)
     ctx.moveTo(x + minGap, y)
@@ -87,14 +93,17 @@ export const drawPath = (ctx: CanvasRenderingContext2D, { x, y, w, h }: Rect, re
     ctx.lineTo(x + minGap, y + h)
 
     ctx.arc(x + minGap, y + h - minGap, minGap, pi / 2, pi)
+    // ctx.stroke()
+
+    // ctx.beginPath()
+    // ctx.lineWidth = lineWidth * 3
     ctx.moveTo(x, y + h - minGap)
     ctx.lineTo(x, y + h / 2 + radius)
     ctx.arc(x, y + h / 2, radius, pi / 2, 5 * pi / 2)//画关联节点
     ctx.moveTo(x, y + h / 2 - radius) //移动到节点下方
     ctx.lineTo(x, y + minGap)
 
-    ctx.strokeStyle = reColor || color.primary
-    ctx.lineWidth = lineWidth
+
     // ctx.lineJoin = 'round'
     ctx.stroke()
     return false
@@ -104,9 +113,23 @@ export const drawRect = (ctx: CanvasRenderingContext2D, { x, y, w, h }: Rect, re
     ctx.fillRect(x, y, w, h)
 }
 
+type LinkBezier = {
+    moveTo: Posi
+    m1: Posi
+    m2: Posi
+    final: Posi
+}
+export const drawLink = (ctx: CanvasRenderingContext2D, { m1, m2, final, moveTo }: LinkBezier, reColor?: string) => {
+    ctx.beginPath()
+    ctx.strokeStyle = reColor || color.primary
+    ctx.moveTo(moveTo.x, moveTo.y)
+    ctx.bezierCurveTo(m1.x, m1.y, m2.x, m2.y, final.x, final.y)
+    ctx.stroke()
+}
+
 export const drawCircle = (ctx: CanvasRenderingContext2D, { x, y, }: Posi, r: number, reColor?: string) => {
     ctx.beginPath()
-    // ctx.moveTo(x, y)
+    // ctx.msg(x, y)
     ctx.strokeStyle = reColor || color.primary
     ctx.arc(x, y, r, 0, 2 * Math.PI)//画关联节点  ctx.strokeStyle = reColor || color.primary
     ctx.lineWidth = lineWidth
