@@ -7,10 +7,12 @@ import {
 import {
     calcRec,
     pointInRect,
+    pointInCircle,
     rectCross,
     rectInRect,
     drawPath,
     drawRect,
+    drawCircle,
     radius,
     color
 } from './tool'
@@ -108,6 +110,9 @@ export class BitTree<T extends Rect> {
     resetAction() {
         this.actionType = ActionType.none
     }
+    // fixOffset() {
+
+    // }
     getClickPosi(x: number, y: number, whichBtn: number) {
         x = x - this.offsetLeft
         y = y - this.offsetTop
@@ -115,11 +120,27 @@ export class BitTree<T extends Rect> {
         switch (whichBtn) {
             case ActionType.node:
                 let clickNode: any = null,
+                    isClickEdgePoint: Posi = { x: -1, y: -1 },
                     // @ts-ignore
                     rectArea = this.root.data.w * this.root.data?.h
+
+                // if clicking edge's point
+
                 this.traverse(t => {
+
                     // @ts-ignore
-                    let temArea = t.data.w * t.data?.h
+                    const { x: tX, y: tY, w, h } = t.data
+                    if (pointInCircle({ x, y }, { x: tX, y: tY + h / 2 })) {
+                        _ass(isClickEdgePoint, { x: tX, y: tY + h / 2 })
+                        return true
+                    }
+                    if (pointInCircle({ x, y }, { x: tX + w, y: tY + h / 2 })) {
+                        _ass(isClickEdgePoint, { x: tX + w, y: tY + h / 2 })
+                        return true
+                    }
+
+                    // @ts-ignore
+                    let temArea = w * h
                     // @ts-ignore
                     if (pointInRect(t.data, x, y) && rectArea >= temArea) {
                         rectArea = temArea
@@ -127,6 +148,15 @@ export class BitTree<T extends Rect> {
                     }
                     return false
                 })
+
+                console.log(isClickEdgePoint);
+
+                if (isClickEdgePoint.x !== -1) {
+                    this.setAction('edgePoint')
+                    // @ts-ignore
+                    drawCircle(this.ctx, isClickEdgePoint, radius, color.warning)
+                    return
+                }
                 // @ts-ignore
                 if (clickNode !== null && clickNode.i !== this.root.i) {
                     this.moveNode = clickNode
@@ -174,6 +204,7 @@ export class BitTree<T extends Rect> {
             case ActionType.cover:
                 // @ts-ignore
                 this.isValidCoverRect(this.coverPoint) && this.insertRightAt(this.root, { ...this.coverPoint })
+                this.reset()
                 break;
             case ActionType.node:
 
@@ -188,11 +219,16 @@ export class BitTree<T extends Rect> {
                     // @ts-ignore
                     _ass(this.moveNode.data, { ...this.coverPoint })
                 }
+                this.reset()
                 break;
-
+            case ActionType.edgePoint:
+                break
             default:
                 break;
         }
+
+    }
+    reset() {
         this.moveNode = null
         this.moveNodeChildren = []
         this.resetAction()

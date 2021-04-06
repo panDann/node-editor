@@ -15,5 +15,6 @@ export type Rect = Posi & {
 export const ActionType = {
   cover: 2,
   node: 0,
+  edgePoint: 3,
   none: -1
 }

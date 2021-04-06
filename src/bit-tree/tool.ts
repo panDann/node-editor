@@ -16,6 +16,10 @@ export const _ass = Object.assign
 export const pointInRect = ({ x, y, w, h }: Rect, pX: number, pY: number,) => {
     return pX > x && pX < x + w && pY > y && pY < y + h
 }
+
+export const pointInCircle = ({ x: pX, y: pY }: Posi, { x, y }: Posi, r = radius) => {
+    return Math.abs(pX - x) ** 2 + Math.abs(pY - y) ** 2 < r ** 2
+}
 export const calcRec = (start: Posi, end: Posi): Rect => {
     const h = Math.abs(start.y - end.y)
     const w = Math.abs(start.x - end.x)
@@ -98,4 +102,14 @@ export const drawPath = (ctx: CanvasRenderingContext2D, { x, y, w, h }: Rect, re
 export const drawRect = (ctx: CanvasRenderingContext2D, { x, y, w, h }: Rect, reColor?: string) => {
     ctx.fillStyle = reColor || color.primary
     ctx.fillRect(x, y, w, h)
+}
+
+export const drawCircle = (ctx: CanvasRenderingContext2D, { x, y, }: Posi, r: number, reColor?: string) => {
+    ctx.beginPath()
+    // ctx.moveTo(x, y)
+    ctx.strokeStyle = reColor || color.primary
+    ctx.arc(x, y, r, 0, 2 * Math.PI)//画关联节点  ctx.strokeStyle = reColor || color.primary
+    ctx.lineWidth = lineWidth
+    // ctx.lineJoin = 'round'
+    ctx.stroke()
 }
