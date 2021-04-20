@@ -18,8 +18,6 @@ import {
     radius,
     color
 } from './tool'
-import { time } from 'echarts/core'
-
 let linkNodeStack: BitNode<any>[] = []
 const _ass = Object.assign
 const clickPos = { x: 0, y: 0 }
@@ -29,7 +27,7 @@ export class BitTree<T extends Rect> {
     }
     root: BitNode<T> | null = null
     actionType = -1
-    // canvasEL: HTMLCanvasElement | null = null
+    ref: HTMLCanvasElement | null = null
     coverPoint = { x: 0, y: 0, h: 0, w: 0 }
     move = {
         moveNode: {} as BitNode<T> | null,
@@ -39,13 +37,11 @@ export class BitTree<T extends Rect> {
     }
 
     linkNodeMsg: LinkNodeMsg<T>[] = []
-    offsetTop = 0//画布顶点偏移量
-    offsetLeft = 0
-    ctx: CanvasRenderingContext2D | null = null
-    isEmpty() {
-        return this.root === null
+    offset = {
+        top: 0,
+        left: 0
     }
-
+    ctx: CanvasRenderingContext2D | null = null
     traverse(visit: (target: BitNode<T>) => boolean, tree = this.root): BitNode<T> | number {
         let bitNodeS = [], temNode = null
         bitNodeS.push(tree)
@@ -58,21 +54,20 @@ export class BitTree<T extends Rect> {
         }
         return -1
     }
-    insertLeftAt(origin: BitNode<T>, target: T) {
-        origin.insertAt('left', target)
-    }
     insertRightAt(origin: BitNode<T>, target: T) {
         origin.insertAt('right', target)
     }
     init(canvasEL: HTMLCanvasElement) {
-        const { width, height, x, y } = canvasEL.getBoundingClientRect()
-        this.offsetLeft = x
-        this.offsetTop = y
+        const { width, height, x, top } = canvasEL.getBoundingClientRect()
+        this.ref = canvasEL
         this.ctx = canvasEL.getContext('2d')
+        _ass(this.offset, { top, left: x })
         _ass(this.root?.data, { w: width, h: height, })
     }
-    isRoot(t: BitNode<T>) {
-        return t.parent == null
+    updateOffset() {
+        // @ts-ignore
+        const { x, top } = this.ref.getBoundingClientRect()
+        _ass(this.offset, { top, left: x })
     }
     isPointInCanvas(x: number, y: number) {
         // @ts-ignore
@@ -85,10 +80,7 @@ export class BitTree<T extends Rect> {
         this.actionType = ActionType.none
     }
     fixOffset({ x, y }: Posi) {
-        return {
-            x: x - this.offsetLeft,
-            y: y - this.offsetTop
-        }
+        return { x: x - this.offset.left, y: y - this.offset.top }
     }
     getClickPosi(posi: Posi, whichBtn: number) {
         const { x, y } = this.fixOffset(posi)
@@ -166,17 +158,15 @@ export class BitTree<T extends Rect> {
     freezeCover(posi: Posi,) {
         const { x, y } = this.fixOffset(posi)
         if (!this.isPointInCanvas(x, y)) return
+        if (clickPos.x == x && clickPos.y == y && this.actionType !== ActionType.edgePoint) return //防止无意义点击
 
         switch (this.actionType) {
             case ActionType.cover:
-                if (clickPos.x == x && clickPos.y == y) return //防止无意义点击
                 // @ts-ignore
                 this.isValidCoverRect(this.coverPoint) && this.insertRightAt(this.root, { ...this.coverPoint })
                 this.reset()
                 break;
             case ActionType.node:
-                if (clickPos.x == x && clickPos.y == y) return //防止无意义点击
-
                 if (this.isValidDrag(this.coverPoint)) {
                     for (const el of this.move.moveNodeChildren) {
                         // @ts-ignore
@@ -256,6 +246,12 @@ export class BitTree<T extends Rect> {
         // window.requestAnimationFrame(this.drawDragCover)
         this.draw()
         drawRect(this.ctx as CanvasRenderingContext2D, this.coverPoint, this.isValidDrag(this.coverPoint) ? color.dragPrimary : color.dragWarning)
+    }
+    drawJoinCircle = (ctx: CanvasRenderingContext2D, { x, y, }: Posi, r: number, reColor?: string) => {
+        ctx.beginPath()
+        ctx.fillStyle = reColor || color.primary
+        ctx.arc(x, y, r, 0, 2 * Math.PI)//画关联节点  ctx.strokeStyle = reColor || color.primary
+        ctx.fill()
     }
     isValidDrag(target: Rect) {
         if (this.checkMoveOverstep(target)) return false

@@ -31,14 +31,15 @@ export default function BitTreeCom(props: IProps) {
   const ref = useRef<HTMLCanvasElement | null>(null)
   useLayoutEffect(() => {
     const { bitTree } = props
-    // ctx = canEl?.getContext('2d') as CanvasRenderingContext2D
     bitTree.init(ref.current as HTMLCanvasElement)
     bitTree.draw()
     // @ts-ignore
     document.addEventListener('mouseup', onDocUp)
+    document.addEventListener('scroll', onScroll)
     return () => {
       // @ts-ignore
       document?.removeEventListener('mouseup', onDocUp)
+      document?.removeEventListener('mouseup', onScroll)
     }
   }, [])
 
@@ -56,11 +57,14 @@ export default function BitTreeCom(props: IProps) {
     ref.current.removeEventListener('mousemove', onMove)
     props.bitTree.freezeCover({ x, y })
   }
+  const onScroll = () => {
+    props.bitTree.updateOffset()
+  }
   return (
     <div className='bit-tree-container' >
-      <div className='operators'>
+      {/* <div className='operators' style={{ height: 300 }}>
 
-      </div>
+      </div> */}
       <canvas ref={ref} height={500}
         onContextMenu={(e) => e.preventDefault()}
         onMouseDownCapture={onDown}

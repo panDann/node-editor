@@ -94,7 +94,6 @@ export const drawPath = (ctx: CanvasRenderingContext2D, { x, y, w, h }: Rect, re
 
     ctx.arc(x + minGap, y + h - minGap, minGap, pi / 2, pi)
     // ctx.stroke()
-
     // ctx.beginPath()
     // ctx.lineWidth = lineWidth * 3
     ctx.moveTo(x, y + h - minGap)
@@ -103,8 +102,6 @@ export const drawPath = (ctx: CanvasRenderingContext2D, { x, y, w, h }: Rect, re
     ctx.moveTo(x, y + h / 2 - radius) //移动到节点下方
     ctx.lineTo(x, y + minGap)
 
-
-    // ctx.lineJoin = 'round'
     ctx.stroke()
     return false
 }
@@ -129,10 +126,15 @@ export const drawLink = (ctx: CanvasRenderingContext2D, { m1, m2, final, moveTo 
 
 export const drawCircle = (ctx: CanvasRenderingContext2D, { x, y, }: Posi, r: number, reColor?: string) => {
     ctx.beginPath()
-    // ctx.msg(x, y)
     ctx.strokeStyle = reColor || color.primary
     ctx.arc(x, y, r, 0, 2 * Math.PI)//画关联节点  ctx.strokeStyle = reColor || color.primary
     ctx.lineWidth = lineWidth
-    // ctx.lineJoin = 'round'
     ctx.stroke()
+}
+
+export const drawJoinCircle = (ctx: CanvasRenderingContext2D, { x, y, }: Posi, r: number, reColor?: string) => {
+    ctx.beginPath()
+    ctx.fillStyle = reColor || color.primary
+    ctx.arc(x, y, r, 0, 2 * Math.PI)//画关联节点  ctx.strokeStyle = reColor || color.primary
+    ctx.fill()
 }
